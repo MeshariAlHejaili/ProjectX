@@ -1,125 +1,82 @@
 using UnityEngine;
 using UnityEngine.AI;
 
-[RequireComponent(typeof(NavMeshAgent))]
 public class EnemyAI : MonoBehaviour
 {
-    [Header("Settings")]
-    [SerializeField] private float chaseRange = 10f;
-    [SerializeField] private float attackRange = 2f; // Must be slightly larger than Stopping Distance
-    [SerializeField] private float timeBetweenAttacks = 1.5f;
-    [SerializeField] private int attackDamage = 10;
-
     [Header("Setup")]
-    [SerializeField] private string targetTag = "Player"; 
+    public Transform player;
+    public float attackRange = 1.5f; // How close to get before attacking
+    public float timeBetweenAttacks = 1.5f; // Cooldown in seconds
+    public int attackDamage = 10;
 
-    // Internal Variables
     private NavMeshAgent agent;
     private Animator animator;
-    private Transform targetTransform;
-    private IDamageable targetHealth;
-    private bool alreadyAttacked;
+    private float attackTimer = 0f;
 
-    // Animation Parameter IDs (Faster than using strings)
-    private static readonly int IsMovingParam = Animator.StringToHash("IsMoving");
-    private static readonly int AttackParam = Animator.StringToHash("Attack");
-
-    private void Awake()
+    void Start()
     {
         agent = GetComponent<NavMeshAgent>();
-        animator = GetComponentInChildren<Animator>();
-    }
+        animator = GetComponent<Animator>();
 
-    private void Start()
-    {
-        // Auto-find the player
-        GameObject playerObj = GameObject.FindGameObjectWithTag(targetTag);
-        if (playerObj != null)
+        if (player == null)
         {
-            targetTransform = playerObj.transform;
-            targetHealth = playerObj.GetComponent<IDamageable>();
-        }
-        else
-        {
-            Debug.LogWarning("EnemyAI: Could not find object with tag 'Player'.");
+            GameObject playerObj = GameObject.FindGameObjectWithTag("Player");
+            if (playerObj != null) player = playerObj.transform;
         }
     }
 
-    private void Update()
+    void Update()
     {
-        if (targetTransform == null) return;
+        if (player == null) return;
 
-        float distance = Vector3.Distance(transform.position, targetTransform.position);
+        // 1. Calculate distance to player
+        float distance = Vector3.Distance(transform.position, player.position);
 
+        // 2. Manage the cooldown timer
+        attackTimer += Time.deltaTime;
+
+        // 3. DECISION: Attack or Chase?
         if (distance <= attackRange)
         {
-            AttackBehavior();
-        }
-        else if (distance <= chaseRange)
-        {
-            ChaseBehavior();
+            // --- ATTACK MODE ---
+            // Stop moving so he doesn't push the player
+            agent.isStopped = true; 
+            // Reset speed animation to 0 so he doesn't "moonwalk"
+            animator.SetFloat("Speed", 0); 
+
+            if (attackTimer >= timeBetweenAttacks)
+            {
+                AttackPlayer();
+            }
         }
         else
         {
-            IdleBehavior();
+            // --- CHASE MODE ---
+            agent.isStopped = false;
+            agent.SetDestination(player.position);
+            animator.SetFloat("Speed", agent.velocity.magnitude);
         }
     }
 
-    private void IdleBehavior()
+    void AttackPlayer()
     {
-        agent.isStopped = true;
-        animator.SetBool(IsMovingParam, false);
-    }
+        // Reset timer
+        attackTimer = 0f;
 
-    private void ChaseBehavior()
-    {
-        agent.isStopped = false;
-        agent.SetDestination(targetTransform.position);
-        animator.SetBool(IsMovingParam, true);
-    }
+        // A. Play Animation
+        animator.SetTrigger("Attack");
 
-    private void AttackBehavior()
-    {
-        agent.isStopped = true;
-        animator.SetBool(IsMovingParam, false);
-        
-        // Rotate to face the player smoothly
-        Vector3 direction = (targetTransform.position - transform.position).normalized;
-        direction.y = 0;
-        if (direction != Vector3.zero) 
+        // B. Deal Damage
+        // This looks for a "Health" script or "IDamageable" on the player
+        // Adjust "IDamageable" to whatever script holds your Player's HP!
+        var playerHealth = player.GetComponent<IDamageable>();
+        if (playerHealth != null)
         {
-            Quaternion lookRotation = Quaternion.LookRotation(direction);
-            transform.rotation = Quaternion.Slerp(transform.rotation, lookRotation, Time.deltaTime * 5f);
+            playerHealth.TakeDamage(attackDamage);
         }
-
-        if (!alreadyAttacked)
+        else
         {
-            // 1. Trigger Animation
-            animator.SetTrigger(AttackParam);
-
-            // 2. Deal Damage directly (Simple logic)
-            if (targetHealth != null)
-            {
-                targetHealth.TakeDamage(attackDamage);
-            }
-
-            // 3. Cooldown
-            alreadyAttacked = true;
-            Invoke(nameof(ResetAttack), timeBetweenAttacks);
+            Debug.Log("Attacking Player! (But Player has no IDamageable script)");
         }
-    }
-
-    private void ResetAttack()
-    {
-        alreadyAttacked = false;
-    }
-    
-    // Visualize Ranges in Editor
-    private void OnDrawGizmosSelected()
-    {
-        Gizmos.color = Color.yellow;
-        Gizmos.DrawWireSphere(transform.position, chaseRange);
-        Gizmos.color = Color.red;
-        Gizmos.DrawWireSphere(transform.position, attackRange);
     }
 }
