@@ -1,5 +1,6 @@
 using UnityEngine;
-using UnityEngine.InputSystem; // REQUIRED for the new system
+using UnityEngine.InputSystem; 
+using System.Collections;
 
 public class PlayerSword : MonoBehaviour
 {
@@ -12,32 +13,34 @@ public class PlayerSword : MonoBehaviour
 
     [Header("Cooldown")]
     public float attackRate = 2f;
-    float nextAttackTime = 0f;
+    [HideInInspector] public float nextAttackTime = 0f; // Made public/hidden for PlayerController access
 
     void Start()
     {
         if (animator == null) animator = GetComponent<Animator>();
     }
 
-    void Update()
+    // --- NEW: Public method for PlayerController to call (Handles cooldown check) ---
+    public bool TrySlash()
     {
-        // FIX: Using Mouse.current.leftButton instead of Input.GetButtonDown
-        if (Time.time >= nextAttackTime && Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame)
+        if (Time.time >= nextAttackTime)
         {
             Slash();
             nextAttackTime = Time.time + 1f / attackRate;
+            return true;
         }
+        return false;
     }
 
-void Slash()
+    void Slash()
     {
-        // CHANGED: We now use "AttackTrigger" to match your Animator
         if (animator != null) animator.SetTrigger("AttackTrigger");
 
         Collider[] hitEnemies = Physics.OverlapSphere(attackPoint.position, attackRange, enemyLayers);
 
         foreach (Collider enemy in hitEnemies)
         {
+            // Assuming the enemy has a component called EnemyHealth
             EnemyHealth hp = enemy.GetComponent<EnemyHealth>();
             if (hp != null)
             {
