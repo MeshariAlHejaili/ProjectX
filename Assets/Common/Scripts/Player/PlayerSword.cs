@@ -29,9 +29,10 @@ public class PlayerSword : MonoBehaviour
         }
     }
 
-    void Slash()
+void Slash()
     {
-        if (animator != null) animator.SetTrigger("Attack");
+        // CHANGED: We now use "AttackTrigger" to match your Animator
+        if (animator != null) animator.SetTrigger("AttackTrigger");
 
         Collider[] hitEnemies = Physics.OverlapSphere(attackPoint.position, attackRange, enemyLayers);
 

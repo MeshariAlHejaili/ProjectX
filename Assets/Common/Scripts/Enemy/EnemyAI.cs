@@ -5,8 +5,8 @@ public class EnemyAI : MonoBehaviour
 {
     [Header("Setup")]
     public Transform player;
-    public float attackRange = 1.5f; // How close to get before attacking
-    public float timeBetweenAttacks = 1.5f; // Cooldown in seconds
+    public float attackRange = 1.5f;
+    public float timeBetweenAttacks = 1.5f;
     public int attackDamage = 10;
 
     private NavMeshAgent agent;
@@ -29,20 +29,16 @@ public class EnemyAI : MonoBehaviour
     {
         if (player == null) return;
 
-        // 1. Calculate distance to player
         float distance = Vector3.Distance(transform.position, player.position);
-
-        // 2. Manage the cooldown timer
         attackTimer += Time.deltaTime;
 
-        // 3. DECISION: Attack or Chase?
         if (distance <= attackRange)
         {
             // --- ATTACK MODE ---
-            // Stop moving so he doesn't push the player
-            agent.isStopped = true; 
-            // Reset speed animation to 0 so he doesn't "moonwalk"
-            animator.SetFloat("Speed", 0); 
+            agent.isStopped = true;
+            
+            // STOP WALKING: We tell the animator we are NOT moving
+            animator.SetBool("IsMoving", false); 
 
             if (attackTimer >= timeBetweenAttacks)
             {
@@ -54,29 +50,25 @@ public class EnemyAI : MonoBehaviour
             // --- CHASE MODE ---
             agent.isStopped = false;
             agent.SetDestination(player.position);
-            animator.SetFloat("Speed", agent.velocity.magnitude);
+
+            // START WALKING: If our speed is > 0.1, we are moving
+            // This line fixes your error!
+            bool currentlyMoving = agent.velocity.magnitude > 0.1f;
+            animator.SetBool("IsMoving", currentlyMoving);
         }
     }
 
     void AttackPlayer()
     {
-        // Reset timer
         attackTimer = 0f;
+        
+        // Ensure you have a Trigger named "Attack" (or "AttackTrigger")
+        animator.SetTrigger("Attack"); 
 
-        // A. Play Animation
-        animator.SetTrigger("Attack");
-
-        // B. Deal Damage
-        // This looks for a "Health" script or "IDamageable" on the player
-        // Adjust "IDamageable" to whatever script holds your Player's HP!
         var playerHealth = player.GetComponent<IDamageable>();
         if (playerHealth != null)
         {
             playerHealth.TakeDamage(attackDamage);
-        }
-        else
-        {
-            Debug.Log("Attacking Player! (But Player has no IDamageable script)");
         }
     }
 }
