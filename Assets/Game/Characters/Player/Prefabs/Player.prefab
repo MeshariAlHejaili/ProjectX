@@ -41,7 +41,7 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 3722035622965246762, guid: e625906aa3584f2438cf119f0cd401a9, type: 3}
       propertyPath: m_Name
-      value: Player Variant 1
+      value: Player
       objectReference: {fileID: 0}
     - target: {fileID: 3722035622965246762, guid: e625906aa3584f2438cf119f0cd401a9, type: 3}
       propertyPath: m_TagString
@@ -53,7 +53,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4101797402397188496, guid: e625906aa3584f2438cf119f0cd401a9, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 5.7736855
+      value: -0.22631454
       objectReference: {fileID: 0}
     - target: {fileID: 4101797402397188496, guid: e625906aa3584f2438cf119f0cd401a9, type: 3}
       propertyPath: m_LocalPosition.z
@@ -158,12 +158,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5728bc1c1cea41d45ab896f325292e04, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  moveSpeed: 5
-  rotationSpeed: 10
-  attackCooldown: 1.5
-  rollSpeed: 10
+  moveSpeed: 3
+  rotationSpeed: 50
+  attackCooldown: 0
+  rollSpeed: 8
   rollDuration: 0.8
-  rollCooldown: 1.2
+  rollCooldown: 0
   attackMovementPenalty: 0.3
 --- !u!114 &6585495602840453724
 MonoBehaviour:
