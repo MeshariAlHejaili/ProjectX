@@ -3388,7 +3388,7 @@ GameObject:
   - component: {fileID: 6175049749632872304}
   - component: {fileID: 2259636354353801015}
   m_Layer: 6
-  m_Name: ShirtlessZombie_BodyParts_FREE_URP
+  m_Name: Zombie
   m_TagString: Enemy
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

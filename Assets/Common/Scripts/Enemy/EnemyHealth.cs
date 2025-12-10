@@ -34,14 +34,19 @@ public class EnemyHealth : MonoBehaviour, IDamageable
     private void Die()
     {
         isDead = true;
-        
+
         // 1. Disable Brain and Physics so he stops moving
-        if(GetComponent<EnemyAI>()) GetComponent<EnemyAI>().enabled = false;
-        if(GetComponent<NavMeshAgent>()) GetComponent<NavMeshAgent>().enabled = false;
-        if(GetComponent<Collider>()) GetComponent<Collider>().enabled = false;
+        if (GetComponent<EnemyAI>()) GetComponent<EnemyAI>().enabled = false;
+        if (GetComponent<NavMeshAgent>()) GetComponent<NavMeshAgent>().enabled = false;
+        if (GetComponent<Collider>()) GetComponent<Collider>().enabled = false;
 
         // 2. Play Death Animation
         if (animator != null) animator.SetTrigger("Die");
+
+        if (WaveManager.Instance != null)
+        {
+            WaveManager.Instance.RegisterEnemyDeath();
+        }
 
         // 3. Delete body after 5 seconds to clear memory
         Destroy(gameObject, 5f);

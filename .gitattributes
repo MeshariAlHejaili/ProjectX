@@ -1,2 +1,39 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+
+# Unity YAML files (Scenes, Prefabs, Materials, Animations) - merge with UnityYAMLMerge
+*.unity merge=unityyamlmerge
+*.prefab merge=unityyamlmerge
+*.asset merge=unityyamlmerge
+*.meta merge=unityyamlmerge
+*.mat merge=unityyamlmerge
+*.anim merge=unityyamlmerge
+*.controller merge=unityyamlmerge
+*.overrideController merge=unityyamlmerge
+*.physicMaterial merge=unityyamlmerge
+*.physicsMaterial merge=unityyamlmerge
+
+# Scripts - treat as text files
+*.cs text
+*.shader text
+*.cginc text
+
+# Binary Unity assets (do not attempt text merge)
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.psd binary
+*.tga binary
+*.fbx binary
+*.obj binary
+*.dll binary
+*.mp3 binary
+*.wav binary
+*.ogg binary
+*.mp4 binary
+
+# Prevent merge conflicts in Library / Temp (these shouldn't be version controlled)
+[Ll]ibrary/ -text
+[Tt]emp/ -text
+[Bb]uild/ -text
+[Bb]uilds/ -text
