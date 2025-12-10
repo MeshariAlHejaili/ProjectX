@@ -3506,9 +3506,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   player: {fileID: 0}
-  attackRange: 1.5
+  attackRange: 1
   timeBetweenAttacks: 1.5
-  attackDamage: 10
+  attackDamage: 5
 --- !u!114 &2259636354353801015
 MonoBehaviour:
   m_ObjectHideFlags: 0
