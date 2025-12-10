@@ -7,12 +7,16 @@ public class PlayerController : MonoBehaviour
     [Header("Settings")]
     public float moveSpeed = 5f;
     public float rotationSpeed = 10f;
-    public float attackCooldown = 1.0f;
     
-    [Header("Roll Settings")]
-    public float rollSpeed = 10f;    // Faster than running
-    public float rollDuration = 0.8f; // How long the roll lasts (match animation length)
-    public float rollCooldown = 1.2f; // prevent spamming
+    [Header("Attack Settings")]
+    public float attack1Duration = 0.5f;   // Duration of the first attack clip
+    public float comboInputWindow = 0.3f;  // Time the player has to press the second attack
+    public float actionCooldown = 1.5f;    
+
+    [Header("Dash Settings")] 
+    public float dashSpeed = 10f;    
+    public float dashDuration = 0.3f; 
+    public float dashCooldown = 1.2f; 
 
     [Header("Combat Settings")]
     [Range(0f, 1f)] public float attackMovementPenalty = 0.3f; 
@@ -21,30 +25,33 @@ public class PlayerController : MonoBehaviour
     private CharacterController _controller;
     private Animator _animator;
     private PlayerControls _input;
-    private Camera _mainCamera;
+    private Camera _mainCamera; // Camera is no longer used for rotation, but kept for setup
 
     // State Variables
     private Vector2 _moveInput;
-    private Vector2 _mousePosition;
+    private Vector2 _mousePosition; // No longer used for rotation
     
     private bool _isAttacking = false;
-    private bool _isRolling = false; // NEW FLAG
+    private bool _isDashing = false; 
+    private bool _canDash = true;    
+    
+    private bool _comboWindowOpen = false; 
+    private bool _comboInputReceived = false; 
 
     private void Awake()
     {
         _controller = GetComponent<CharacterController>();
         _animator = GetComponent<Animator>();
         _input = new PlayerControls();
-        _mainCamera = Camera.main;
+        _mainCamera = Camera.main; // Still useful if you use the camera for movement direction relative to camera
 
+        // Input Listeners
         _input.Player.Move.performed += ctx => _moveInput = ctx.ReadValue<Vector2>();
         _input.Player.Move.canceled += ctx => _moveInput = Vector2.zero;
-        _input.Player.Look.performed += ctx => _mousePosition = ctx.ReadValue<Vector2>();
+        // _input.Player.Look.performed += ctx => _mousePosition = ctx.ReadValue<Vector2>(); // MOUSE LOOK REMOVED
         
         _input.Player.Attack.performed += ctx => PerformAttack();
-        
-        // NEW: Roll Listener
-        _input.Player.Roll.performed += ctx => PerformRoll();
+        _input.Player.Roll.performed += ctx => PerformDash(); 
     }
 
     private void OnEnable() => _input.Enable();
@@ -52,21 +59,19 @@ public class PlayerController : MonoBehaviour
 
     private void Update()
     {
-        // 1. PRIORITY CHECK: Rolling overrides EVERYTHING.
-        if (_isRolling)
+        if (_isDashing)
         {
-            // While rolling, we don't run normal movement or rotation logic.
-            // The Roll Coroutine handles the movement.
             return;
         }
 
         HandleMovement();
-        HandleRotation();
+        HandleRotation(); // NOW HANDLES MOVEMENT-BASED ROTATION
         HandleAnimation();
     }
 
     private void HandleMovement()
     {
+        // Vector in World Space based on WASD keys
         Vector3 move = new Vector3(_moveInput.x, 0, _moveInput.y);
         float currentSpeed = moveSpeed;
 
@@ -75,105 +80,121 @@ public class PlayerController : MonoBehaviour
             currentSpeed *= attackMovementPenalty;
         }
 
+        // Apply movement and gravity
         _controller.Move(move * currentSpeed * Time.deltaTime);
         _controller.Move(Vector3.down * 5f * Time.deltaTime);
     }
 
+    // --- MODIFIED: ROTATE CHARACTER TO FACE MOVEMENT DIRECTION ---
     private void HandleRotation()
     {
-        Ray ray = _mainCamera.ScreenPointToRay(_mousePosition);
-        Plane groundPlane = new Plane(Vector3.up, Vector3.zero);
+        // Don't rotate if locked in attack or dash
+        if (_isAttacking || _isDashing) return; 
 
-        if (groundPlane.Raycast(ray, out float enter))
+        // 1. Get the direction vector from input (ignoring Y-axis for 2D movement)
+        Vector3 inputDirection = new Vector3(_moveInput.x, 0f, _moveInput.y).normalized;
+
+        // 2. Only rotate if there is actual input movement
+        if (inputDirection.magnitude >= 0.1f)
         {
-            Vector3 hitPoint = ray.GetPoint(enter);
-            Vector3 lookDir = hitPoint - transform.position;
-            lookDir.y = 0;
+            // Determine the target rotation based on the input vector
+            Quaternion targetRotation = Quaternion.LookRotation(inputDirection);
 
-            if (lookDir != Vector3.zero)
-            {
-                transform.rotation = Quaternion.RotateTowards(
-                    transform.rotation, 
-                    Quaternion.LookRotation(lookDir), 
-                    rotationSpeed * 100 * Time.deltaTime
-                );
-            }
+            // Smoothly rotate the character towards the target direction
+            transform.rotation = Quaternion.Slerp(
+                transform.rotation, 
+                targetRotation, 
+                rotationSpeed * Time.deltaTime // Using rotationSpeed directly for smooth turns
+            );
         }
     }
+    // -------------------------------------------------------------------
 
     private void HandleAnimation()
     {
-        Vector3 localMove = transform.InverseTransformDirection(new Vector3(_moveInput.x, 0, _moveInput.y));
-        _animator.SetFloat("InputX", localMove.x, 0.1f, Time.deltaTime);
-        _animator.SetFloat("InputY", localMove.z, 0.1f, Time.deltaTime);
+        // ... (Animation logic remains the same for 2D Blend Tree)
+        float inputX = _moveInput.x;
+        float inputY = _moveInput.y;
+        
+        _animator.SetFloat("InputX", inputX, 0f, Time.deltaTime);
+        _animator.SetFloat("InputY", inputY, 0f, Time.deltaTime);
+
+        float speedMagnitude = new Vector3(inputX, 0, inputY).magnitude; 
+        _animator.SetFloat("Speed", Mathf.Clamp01(speedMagnitude), 0f, Time.deltaTime);
     }
 
+    // --- (PerformAttack and AttackRoutine remain the same) ---
     private void PerformAttack()
     {
-        if (_isAttacking || _isRolling) return; // Cannot attack while rolling
-
-        _animator.SetTrigger("AttackTrigger");
-        StartCoroutine(AttackRoutine());
-    }
-
-    // --- NEW ROLL LOGIC ---
-    private void PerformRoll()
-    {
-        if (_isAttacking || _isRolling) return; // Cannot roll if busy
-
-        StartCoroutine(RollRoutine());
-    }
-
-private IEnumerator RollRoutine()
-    {
-        _isRolling = true;
-        _animator.SetTrigger("RollTrigger");
-
-        // 1. Calculate direction based on WASD
-        Vector3 rollDirection = new Vector3(_moveInput.x, 0, _moveInput.y);
-
-        // 2. Handle Rotation
-        if (rollDirection != Vector3.zero)
+        if (_isAttacking) 
         {
-            // If pressing WASD, face that direction immediately!
-            // This snaps the character to face where they are rolling.
-            transform.rotation = Quaternion.LookRotation(rollDirection);
-            rollDirection.Normalize(); 
+            if (_comboWindowOpen)
+            {
+                _comboInputReceived = true; 
+            }
+            return; 
         }
-        else 
-        {
-            // If NOT pressing WASD, roll forward (towards mouse)
-            // No need to rotate, we are already facing the mouse.
-            rollDirection = transform.forward; 
-        }
-
-        // 3. The Physical Movement Loop
-        float timer = 0;
-        while (timer < rollDuration)
-        {
-            // Move strictly forward relative to the character's new facing direction
-            // (Since we just rotated them to face the roll, "forward" IS the roll direction)
-            _controller.Move(transform.forward * rollSpeed * Time.deltaTime);
-            
-            // Gravity
-            _controller.Move(Vector3.down * 5f * Time.deltaTime);
-
-            timer += Time.deltaTime;
-            yield return null; 
-        }
-
-        yield return new WaitForSeconds(0.1f); // Short cooldown
-        _isRolling = false;
         
-        // Once this finishes, _isRolling becomes false.
-        // The Update() loop kicks back in, and the character will 
-        // instantly snap back to face the mouse cursor.
+        if (_isDashing) return; 
+
+        _animator.SetTrigger("IsAttacking");
+        StartCoroutine(AttackRoutine());
     }
 
     private IEnumerator AttackRoutine()
     {
         _isAttacking = true;
-        yield return new WaitForSeconds(attackCooldown); 
+        _comboInputReceived = false;
+        
+        yield return new WaitForSeconds(attack1Duration - comboInputWindow); 
+
+        _comboWindowOpen = true;
+        yield return new WaitForSeconds(comboInputWindow);
+        _comboWindowOpen = false;
+
+        if (_comboInputReceived)
+        {
+            _animator.SetBool("ComboAttack", true); 
+        }
+        else
+        {
+            _animator.SetBool("ComboAttack", false); 
+        }
+
+        yield return new WaitForSeconds(1.5f); 
+        
         _isAttacking = false;
+        _animator.SetBool("ComboAttack", false); 
+    }
+
+    // --- (PerformDash and DashRoutine remain the same) ---
+    private void PerformDash()
+    {
+        if (_isAttacking || _isDashing || !_canDash) return; 
+
+        StartCoroutine(DashRoutine());
+    }
+
+    private IEnumerator DashRoutine()
+    {
+        _isDashing = true;
+        _canDash = false;
+        _animator.SetTrigger("IsDashing"); 
+
+        // This line remains crucial for backward dash relative to current facing direction
+        Vector3 dashDirection = -transform.forward; 
+        
+        float timer = 0;
+        while (timer < dashDuration)
+        {
+            _controller.Move(dashDirection * dashSpeed * Time.deltaTime);
+            _controller.Move(Vector3.down * 5f * Time.deltaTime);
+            timer += Time.deltaTime;
+            yield return null; 
+        }
+
+        _isDashing = false; 
+        yield return new WaitForSeconds(dashCooldown);
+        _canDash = true;
     }
 }
