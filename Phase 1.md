@@ -1,5 +1,4 @@
 # Phase 1 Proposal
-**Project Title: Last Stand Protocol**
 
 ---
 
