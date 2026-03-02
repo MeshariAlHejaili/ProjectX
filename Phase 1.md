@@ -45,7 +45,7 @@ This loop continues until:
 
 ## 2. Benchmark Reference
 
-**Target Reference:** *The Horde Wants You Dead* – Gameplay Footage (YouTube)
+**Target Reference:** *The Horde Wants You Dead* – https://youtu.be/t2MoeUD624E?si=GfAXBovjDSJpeEqU&t=72 until 1:31
 
 **We are replicating:**
 * Top-down arena survival
@@ -101,7 +101,7 @@ This loop continues until:
 * Game Over / Victory screen
 
 **Visual & Audio**
-* Basic materials and lighting
+* Ready materials and lighting from assists store
 * Muzzle flash VFX
 * Enemy hit flash
 * Death VFX
@@ -123,7 +123,6 @@ This loop continues until:
 * No inventory system
 * No procedural map generation
 * No advanced skill trees
-* No bosses
 * No story mode
 * No saving/loading system
 * No weapon switching
